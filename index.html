@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>오늘의 응원 한마디</title>
+<style>
+  :root { --bg:#fff7ec; --card:#ffffff; --ink:#2b2b2b; --accent:#ff7a3d; --accent-d:#e0611f; --err:#c62828; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:flex; justify-content:center; align-items:flex-start;
+         background:var(--bg); color:var(--ink);
+         font-family:-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif; }
+  main { width:100%; max-width:560px; padding:32px 20px; }
+  h1 { font-size:2rem; text-align:center; margin:0 0 24px; }
+  .card { background:var(--card); border-radius:20px; padding:24px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
+  label { display:block; font-size:1.25rem; font-weight:700; margin-bottom:8px; }
+  input { width:100%; font-size:1.375rem; padding:16px; border:2px solid #ccc; border-radius:14px; }
+  input:focus { outline:3px solid var(--accent); border-color:var(--accent); }
+  .hint { font-size:1rem; color:#666; margin:8px 0 20px; }
+  button { width:100%; font-size:1.5rem; font-weight:700; padding:20px; border:0; border-radius:14px;
+           background:var(--accent); color:#fff; cursor:pointer; }
+  button:hover { background:var(--accent-d); }
+  button:disabled { background:#bbb; cursor:wait; }
+  #result { margin-top:24px; min-height:120px; padding:20px; border-radius:14px; background:#fff1e0;
+            font-size:1.5rem; line-height:1.6; text-align:center; word-break:keep-all; overflow-wrap:anywhere; }
+  #result.loading { color:#666; }
+  #result.error { background:#fdecea; color:var(--err); font-size:1.25rem; }
+  #result .who { display:block; font-size:1.125rem; color:#666; margin-bottom:8px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>오늘의 응원 한마디</h1>
+  <div class="card">
+    <label for="nick">공개용 닉네임</label>
+    <input id="nick" type="text" maxlength="20" autocomplete="off" placeholder="비우면 '여러분'으로 불러요">
+    <p class="hint">공개해도 괜찮은 닉네임만 입력해 주세요.</p>
+    <button id="btn" type="button">응원 받기</button>
+    <div id="result" role="status" aria-live="polite">버튼을 눌러 응원을 받아 보세요.</div>
+  </div>
+</main>
+<script>
+(function () {
+  var nick = document.getElementById("nick");
+  var btn = document.getElementById("btn");
+  var result = document.getElementById("result");
+
+  function show(text, cls) {
+    result.className = cls || "";
+    result.textContent = text;
+  }
+
+  btn.addEventListener("click", function () {
+    btn.disabled = true;
+    show("응원 문장을 불러오는 중이에요…", "loading");
+
+    fetch("/api/message?name=" + encodeURIComponent(nick.value.trim()), { cache: "no-store" })
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .then(function (data) {
+        if (!data || typeof data.message !== "string" || typeof data.name !== "string") {
+          throw new Error("bad response");
+        }
+        result.className = "";
+        result.textContent = "";
+        var who = document.createElement("span");
+        who.className = "who";
+        who.textContent = data.name + "님께";
+        result.appendChild(who);
+        result.appendChild(document.createTextNode(data.message));
+      })
+      .catch(function () {
+        show("응원 문장을 가져오지 못했어요. 잠시 후 다시 시도해 주세요.", "error");
+      })
+      .then(function () { btn.disabled = false; });
+  });
+})();
+</script>
+</body>
+</html>
